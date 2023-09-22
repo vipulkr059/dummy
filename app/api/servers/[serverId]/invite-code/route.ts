@@ -1,7 +1,8 @@
+import { v4 as uuidv4 } from "uuid";
+import { NextResponse } from "next/server";
+
 import { currentProfile } from "@/lib/current-profile";
 import { db } from "@/lib/db";
-import { NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid";
 
 export async function PATCH(
   req: Request,
@@ -15,8 +16,9 @@ export async function PATCH(
     }
 
     if (!params.serverId) {
-      return new NextResponse("ServerID Missing", { status: 400 });
+      return new NextResponse("Server ID Missing", { status: 400 });
     }
+
     const server = await db.server.update({
       where: {
         id: params.serverId,
@@ -26,9 +28,10 @@ export async function PATCH(
         inviteCode: uuidv4(),
       },
     });
+
     return NextResponse.json(server);
   } catch (error) {
-    console.log("[Server_ID]", error);
+    console.log("[SERVER_ID]", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

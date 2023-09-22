@@ -1,22 +1,26 @@
-import ChatHeader from "@/components/chat/chat-header";
-import { ChatInput } from "@/components/chat/chat-input";
-import { ChatMessage } from "@/components/chat/chat-message";
-import { MediaRoom } from "@/components/media-room";
-import { currentProfile } from "@/lib/current-profile";
-import { db } from "@/lib/db";
 import { redirectToSignIn } from "@clerk/nextjs";
-import { ChannelType } from "@prisma/client";
 import { redirect } from "next/navigation";
-import React from "react";
+import { ChannelType } from "@prisma/client";
 
-interface ChannelPageProps {
+import { currentProfile } from "@/lib/current-profile";
+import { ChatHeader } from "@/components/chat/chat-header";
+import { ChatInput } from "@/components/chat/chat-input";
+import { ChatMessages } from "@/components/chat/chat-messages";
+import { MediaRoom } from "@/components/media-room";
+import { db } from "@/lib/db";
+
+interface ChannelIdPageProps {
   params: {
     serverId: string;
     channelId: string;
-  };
+  }
 }
-const ChannelIdPage = async ({ params }: ChannelPageProps) => {
+
+const ChannelIdPage = async ({
+  params
+}: ChannelIdPageProps) => {
   const profile = await currentProfile();
+
   if (!profile) {
     return redirectToSignIn();
   }
@@ -31,13 +35,14 @@ const ChannelIdPage = async ({ params }: ChannelPageProps) => {
     where: {
       serverId: params.serverId,
       profileId: profile.id,
-    },
+    }
   });
 
   if (!channel || !member) {
-    return redirect("/");
+    redirect("/");
   }
-  return (
+
+  return ( 
     <div className="bg-white dark:bg-[#313338] flex flex-col h-full">
       <ChatHeader
         name={channel.name}
@@ -46,7 +51,7 @@ const ChannelIdPage = async ({ params }: ChannelPageProps) => {
       />
       {channel.type === ChannelType.TEXT && (
         <>
-          <ChatMessage
+          <ChatMessages
             member={member}
             name={channel.name}
             chatId={channel.id}
@@ -72,13 +77,21 @@ const ChannelIdPage = async ({ params }: ChannelPageProps) => {
         </>
       )}
       {channel.type === ChannelType.AUDIO && (
-        <MediaRoom chatId={channel.id} video={false} audio={true} />
+        <MediaRoom
+          chatId={channel.id}
+          video={false}
+          audio={true}
+        />
       )}
       {channel.type === ChannelType.VIDEO && (
-        <MediaRoom chatId={channel.id} video={true} audio={true} />
+        <MediaRoom
+          chatId={channel.id}
+          video={true}
+          audio={true}
+        />
       )}
     </div>
-  );
-};
-
+   );
+}
+ 
 export default ChannelIdPage;

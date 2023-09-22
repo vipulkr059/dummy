@@ -1,12 +1,13 @@
+import { NextApiRequest } from "next";
+import { MemberRole } from "@prisma/client";
+
+import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
-import { NextApiResponseServerIo } from "@/types";
-import { MemberRole } from "@prisma/client";
-import { NextApiRequest } from "next";
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponseServerIo
+  res: NextApiResponseServerIo,
 ) {
   if (req.method !== "DELETE" && req.method !== "PATCH") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -14,7 +15,7 @@ export default async function handler(
 
   try {
     const profile = await currentProfilePages(req);
-    const { conversationId, directMessageId } = req.query;
+    const { directMessageId, conversationId } = req.query;
     const { content } = req.body;
 
     if (!profile) {
@@ -32,40 +33,37 @@ export default async function handler(
           {
             memberOne: {
               profileId: profile.id,
-            },
+            }
           },
           {
             memberTwo: {
               profileId: profile.id,
-            },
-          },
-        ],
+            }
+          }
+        ]
       },
       include: {
         memberOne: {
           include: {
             profile: true,
-          },
+          }
         },
         memberTwo: {
           include: {
             profile: true,
-          },
-        },
-      },
-    });
+          }
+        }
+      }
+    })
 
     if (!conversation) {
-      return res.status(404).json({ message: "Conversation not found" });
+      return res.status(404).json({ error: "Conversation not found" });
     }
 
-    const member =
-      conversation.memberOne.profileId === profile.id
-        ? conversation.memberOne
-        : conversation.memberTwo;
+    const member = conversation.memberOne.profileId === profile.id ? conversation.memberOne : conversation.memberTwo;
 
     if (!member) {
-      return res.status(404).json({ message: "Member not found" });
+      return res.status(404).json({ error: "Member not found" });
     }
 
     let directMessage = await db.directMessage.findFirst({
@@ -77,10 +75,10 @@ export default async function handler(
         member: {
           include: {
             profile: true,
-          },
-        },
-      },
-    });
+          }
+        }
+      }
+    })
 
     if (!directMessage || directMessage.deleted) {
       return res.status(404).json({ error: "Message not found" });
@@ -102,22 +100,24 @@ export default async function handler(
         },
         data: {
           fileUrl: null,
-          content: "This message has been deleted",
+          content: "This message has been deleted.",
           deleted: true,
         },
         include: {
           member: {
             include: {
               profile: true,
-            },
-          },
-        },
-      });
+            }
+          }
+        }
+      })
     }
+
     if (req.method === "PATCH") {
       if (!isMessageOwner) {
         return res.status(401).json({ error: "Unauthorized" });
       }
+
       directMessage = await db.directMessage.update({
         where: {
           id: directMessageId as string,
@@ -129,18 +129,19 @@ export default async function handler(
           member: {
             include: {
               profile: true,
-            },
-          },
-        },
-      });
+            }
+          }
+        }
+      })
     }
 
     const updateKey = `chat:${conversation.id}:messages:update`;
 
     res?.socket?.server?.io?.emit(updateKey, directMessage);
+
     return res.status(200).json(directMessage);
   } catch (error) {
-    console.log("[DIRECT_MESSAGE_ID]", error);
-    return res.status(500).json({ error: "Internal_Error" });
+    console.log("[MESSAGE_ID]", error);
+    return res.status(500).json({ error: "Internal Error" });
   }
 }
